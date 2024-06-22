@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyNotes</title>
+ 
+    <style>
+        
+* {
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #333;
+    color: white;
+    padding: 30px;
+    position: relative;
+}
+
+.navbar a, .navbar button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.menu {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 50px;
+    left: 10px;
+    background-color: #333;
+    padding: 10px;
+}
+
+.dropdown-icon {
+text-align: center;
+color: #ccc;
+}
+.menu button {
+    margin: 5px 0;
+    color: white;
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.top-icons {  
+    
+    display: flex;
+    gap: 100px;
+}
+
+.top-icons button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.content {
+    padding: 20px;
+    text-align: center;
+}
+
+.noteBoxesContainer {
+    display: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.note-box {
+    text-align: left;
+    width: calc(33.33% - 20px);
+    height: 100px;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: white;
+    resize: none;
+}
+
+.add-note-icon {
+    margin-top: 20px;
+}
+
+.add-note-icon button {
+    background: none;
+    border: none;
+    color: #333;
+    font-size: 24px;
+    cursor: pointer;
+}
+.back-icon {
+    text-decoration: none;
+    color: white;
+    font-size: 18px;
+    padding: 10px;
+    display: inline-block;
+}
+.category button {
+    background: none;
+    border: 1px solid #333;
+    color: #333;
+    font-size: 18px;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.category button:hover {
+    background-color: #333;
+    color: white;
+}
+
+.share-options {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.share-options button {
+    background: #333;;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 18px;
+}
+
+.share-options button:hover {
+    background:#333;
+}
+
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <button id="menuButton">☰</button>
+        <div class="top-icons">
+            <button id="reminderIcon">⏰</button>
+            <button id="shareIcon">📤</button>
+            <button id="searchIcon">🔍</button>
+        </div>
+    </div>
+    
+    <div class="menu" id="menu">
+        <a href="allnotes.html" class="nav-dropdown">
+            <div class="dropdown-icon" id="allNotesButton">📝 All Notes</div>
+        </a><br>
+        <a href="favourite.html" class="nav-dropdown">
+            <div class="dropdown-icon" id="favouriteButton">⭐ Favourites</div>
+        </a><br>
+        <a href="category.html" class="nav-dropdown">
+            <div class="dropdown-icon" id="categoryButton">📁 Category</div>
+        </a><br>
+        <a href="trash.html" class="nav-dropdown">
+            <div class="dropdown-icon" id="trashButton">🗑️ Trash</div>
+        </a>
+    </div>
+
+    <div class="navbar">
+        <a href="index.html" id="backButton" class="back-icon">← Back</a>
+    </div>
+    <div class="content" id="content">
+        <h1>Category</h1>
+        <div class="category">
+            <a href="index.html"><button id="all">ALL</button></a><br><br>
+
+            <button id="home">HOME</button>
+            <div class="note-boxes">
+                <textarea class="note-box" placeholder="Write your note here..."></textarea>
+            </div><br>
+            <button id="work">WORK</button>
+            <div class="note-boxes">
+                <textarea class="note-box" placeholder="Write your note here..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
+    <script>
+    
+        document.addEventListener('DOMContentLoaded', function() {
+                const menuButton = document.getElementById('menuButton');
+                const menu = document.getElementById('menu');
+                const allNotesButton = document.getElementById('allNotesButton');
+                const favouriteButton = document.getElementById('favouriteButton');
+                const categoryButton = document.getElementById('categoryButton');
+                const trashButton = document.getElementById('trashButton');
+                const content = document.getElementById('content');
+                const reminderIcon = document.getElementById('reminderIcon');
+                const shareIcon = document.getElementById('shareIcon');
+                const noteBoxesContainer = document.getElementById('noteBoxesContainer');
+                const addNoteIcon = document.getElementById('addNoteIcon');
+                
+                // Function to handle adding notes to favourites and updating localStorage
+                function addToFavourites(noteText) {
+                    let favourites = JSON.parse(localStorage.getItem('favourites')) || [];
+                    favourites.push(noteText);
+                    localStorage.setItem('favourites', JSON.stringify(favourites));
+                    alert('Note added to favourites');
+                }
+                
+                // Function to handle adding notes to trash and updating localStorage
+                function addToTrash(noteText) {
+                    let trash = JSON.parse(localStorage.getItem('trash')) || [];
+                    trash.push(noteText);
+                    localStorage.setItem('trash', JSON.stringify(trash));
+                    alert('Note added to trash');
+                }
+    
+                // Add new note box
+                addNoteIcon.onclick = function() {
+                    const noteContainer = document.createElement('div');
+                    noteContainer.innerHTML = `
+                        <textarea class="note-box" placeholder="Write your note here..."></textarea>
+                        <div class="add-note-fav">
+                            <button class="addtofav">Add to⭐</button>
+                        </div>
+                        <div class="add-note-trash">
+                            <button class="addtotrash">Add to🗑️</button>
+                        </div><br>
+                    `;
+                    noteBoxesContainer.appendChild(noteContainer);
+    
+                    noteContainer.querySelector('.addtofav').addEventListener('click', function() {
+                        const noteText = noteContainer.querySelector('.note-box').value;
+                        addToFavourites(noteText);
+                    });
+    
+                    noteContainer.querySelector('.addtotrash').addEventListener('click', function() {
+                        const noteText = noteContainer.querySelector('.note-box').value;
+                        addToTrash(noteText);
+                    });
+                };
+    
+                menuButton.addEventListener('click', function() {
+                    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+                });
+    
+                allNotesButton.addEventListener('click', function() {
+                    content.innerHTML = '<h1>All Notes</h1><button onclick="goBack()">Back</button>';
+                });
+    
+                favouriteButton.addEventListener('click', function() {
+                    window.location.href = 'favourite.html';
+                });
+    
+                categoryButton.addEventListener('click', function() {
+                    content.innerHTML = '<h1>Categories</h1><ul><li>All</li><li>Home</li><li>Work</li></ul><button onclick="goBack()">Back</button>';
+                });
+    
+                trashButton.addEventListener('click', function() {
+                    content.innerHTML = '<h1>Trash</h1><button onclick="goBack()">Back</button>';
+                });
+    
+                reminderIcon.addEventListener('click', function() {
+                    content.innerHTML = '<h1>Reminders</h1><button onclick="goBack()">Back</button>';
+                });
+    
+                shareIcon.addEventListener('click', function() {
+                    content.innerHTML = `
+                        <h1>Share as</h1>
+                        <div class="share-options">
+                            <button id="shareText">Text Only</button>
+                            <button id="sharePDF">PDF</button>
+                            <button id="sharePicture">Picture</button>
+                        </div>
+                        <button onclick="goBack()">Back</button>
+                    `;
+                    
+                    const shareTextButton = document.getElementById('shareText');
+                    const sharePDFButton = document.getElementById('sharePDF');
+                    const sharePictureButton = document.getElementById('sharePicture');
+    
+                    shareTextButton.addEventListener('click', function() {
+                        shareText();
+                    });
+    
+                    sharePDFButton.addEventListener('click', function() {
+                        sharePDF();
+                    });
+    
+                    sharePictureButton.addEventListener('click', function() {
+                        sharePicture();
+                    });
+                });
+    
+                window.shareText = function() {
+                    alert('Sharing text...');
+                };
+    
+                window.sharePDF = function() {
+                    alert('Sharing PDF...');
+                };
+    
+                window.sharePicture = function() {
+                    alert('Sharing picture...');
+                };
+    
+                window.goBack = function() {
+                    window.location.href = "example.html";
+                };
+    
+                // Initialize favourites display on page load
+                const favouriteNotesContainer = document.getElementById('favouriteNotes');
+    
+                let favourites = JSON.parse(localStorage.getItem('favourites')) || [];
+                favourites.forEach(note => {
+                    const noteElement = document.createElement('p');
+                    noteElement.textContent = note;
+                    favouriteNotesContainer.appendChild(noteElement);
+                });
+            });
+    
+        
+    const firebaseConfig = {
+                apiKey: "AIzaSyDX4YzOoh8bggpRJqg2XkcnCy4OKu12bmo",
+                authDomain: "notesproject-46bb0.firebaseapp.com",
+                databaseURL: "https://notesproject-46bb0-default-rtdb.firebaseio.com",
+                projectId: "notesproject-46bb0",
+                storageBucket: "notesproject-46bb0.appspot.com",
+                messagingSenderId: "90659896415",
+                appId: "1:90659896415:web:d08bd9669dc05710efafea",
+                measurementId: "G-ZPEX0X4F2Z"
+              };
+        
+            const app = firebase.initializeApp(firebaseConfig);
+            const analytics = firebase.analytics();
+            const database = firebase.database();
+        
+    
+            </script>
+</body>
+</html>
